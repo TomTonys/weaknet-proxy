@@ -20,7 +20,7 @@ jobs:
 
     - name: Build for CentOS (Linux amd64)
       run: |
-        GOOS=linux GOARCH=amd64 go build -o weaknet-proxy main.go
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o weaknet-proxy main.go
 
     - name: Upload Binary Artifact
       uses: actions/upload-artifact@v4
