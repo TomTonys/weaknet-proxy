@@ -1,0 +1,28 @@
+name: Build Linux Binary
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # 支持手动点击按钮触发构建
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+
+    - name: Build for CentOS (Linux amd64)
+      run: |
+        GOOS=linux GOARCH=amd64 go build -o weaknet-proxy main.go
+
+    - name: Upload Binary Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: weaknet-proxy-centos
+        path: weaknet-proxy
