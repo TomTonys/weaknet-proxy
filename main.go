@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -10,9 +9,9 @@ import (
 	"time"
 )
 
-// 默认配置：监听 8107 端口，网速限制为 5 KB/s (2G弱网)
+// 默认配置：监听 8107 端口，网速限制为 5 KB/s (2G 弱网)
 const (
-	LISTEN_PORT        = ":8107"
+	LISTEN_PORT       = ":8107"
 	TARGET_SPEED_KBPS = 5 // 单位: KB/s
 )
 
@@ -67,7 +66,7 @@ func handleSocks5(clientConn net.Conn) {
 	if _, err := io.ReadFull(clientConn, buf[:4]); err != nil {
 		return
 	}
-	
+
 	var host string
 	switch buf[3] {
 	case 0x01: // IPv4
