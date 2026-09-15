@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -93,15 +94,19 @@ func handleSocks5(clientConn net.Conn, targetSpeedKBPS int64) {
 	}
 	port := binary.BigEndian.Uint16(buf[:2])
 	targetAddr := net.JoinHostPort(host, strconv.Itoa(int(port)))
+	clientAddr := clientConn.RemoteAddr().String()
+	log.Printf("代理请求: client=%s target=%s", clientAddr, targetAddr)
 
 	// 3. 连接目标服务器
 	targetConn, err := net.Dial("tcp", targetAddr)
 	if err != nil {
 		// 回复连接失败
+		log.Printf("连接失败: client=%s target=%s error=%v", clientAddr, targetAddr, err)
 		clientConn.Write([]byte{0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0})
 		return
 	}
 	defer targetConn.Close()
+	log.Printf("连接成功: client=%s target=%s", clientAddr, targetAddr)
 
 	// 回复连接成功
 	clientConn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0})
@@ -112,6 +117,7 @@ func handleSocks5(clientConn net.Conn, targetSpeedKBPS int64) {
 
 	go io.Copy(targetConn, limitedClient)
 	io.Copy(clientConn, limitedTarget)
+	log.Printf("连接结束: client=%s target=%s", clientAddr, targetAddr)
 }
 
 func main() {
