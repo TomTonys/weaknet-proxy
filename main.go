@@ -10,9 +10,18 @@ import (
 )
 
 // 默认配置：监听 8107 端口，网速限制为 5 KB/s (2G 弱网)
+// 网络场景	建议下载/上传限速
+// 极弱 2G / EDGE	5–20 KB/s
+// 普通 2G	20–50 KB/s
+// 3G 弱网	100–300 KB/s
+// 普通 3G	300–1000 KB/s
+// 4G 弱网	1–3 MB/s
+// 普通 4G	3–10 MB/s
+// 5G	10 MB/s 以上
+
 const (
 	LISTEN_PORT       = ":8107"
-	TARGET_SPEED_KBPS = 5 // 单位: KB/s
+	TARGET_SPEED_KBPS = 30 // 单位: KB/s
 )
 
 // 限速包装器
