@@ -2,26 +2,18 @@ package main
 
 import (
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 )
 
-// 默认配置：监听 8107 端口，网速限制为 5 KB/s (2G 弱网)
-// 网络场景	建议下载/上传限速
-// 极弱 2G / EDGE	5–20 KB/s
-// 普通 2G	20–50 KB/s
-// 3G 弱网	100–300 KB/s
-// 普通 3G	300–1000 KB/s
-// 4G 弱网	1–3 MB/s
-// 普通 4G	3–10 MB/s
-// 5G	10 MB/s 以上
-
 const (
-	LISTEN_PORT       = ":8107"
-	TARGET_SPEED_KBPS = 30 // 单位: KB/s
+	defaultListenPort      = "8107"
+	defaultTargetSpeedKBPS = 30 // 单位: KB/s
 )
 
 // 限速包装器
@@ -56,7 +48,7 @@ func (r *RateLimitedReader) Read(p []byte) (n int, err error) {
 }
 
 // SOCKS5 握手处理
-func handleSocks5(clientConn net.Conn) {
+func handleSocks5(clientConn net.Conn, targetSpeedKBPS int64) {
 	defer clientConn.Close()
 
 	// 1. 协商阶段
@@ -115,27 +107,40 @@ func handleSocks5(clientConn net.Conn) {
 	clientConn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0})
 
 	// 4. 双向透传流量并限速
-	limitedClient := NewRateLimitedReader(clientConn, TARGET_SPEED_KBPS)
-	limitedTarget := NewRateLimitedReader(targetConn, TARGET_SPEED_KBPS)
+	limitedClient := NewRateLimitedReader(clientConn, targetSpeedKBPS)
+	limitedTarget := NewRateLimitedReader(targetConn, targetSpeedKBPS)
 
 	go io.Copy(targetConn, limitedClient)
 	io.Copy(clientConn, limitedTarget)
 }
 
 func main() {
-	listener, err := net.Listen("tcp", LISTEN_PORT)
+	speed := flag.Int64("speed", defaultTargetSpeedKBPS, "限速，单位: KB/s")
+	listen := flag.String("listen", defaultListenPort, "监听端口，例如 8107")
+	flag.Parse()
+
+	if *speed <= 0 {
+		panic("speed must be greater than 0")
+	}
+
+	listenAddr := *listen
+	if !strings.Contains(listenAddr, ":") {
+		listenAddr = ":" + listenAddr
+	}
+
+	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		panic(err)
 	}
 	defer listener.Close()
 
-	fmt.Printf("SOCKS5 弱网代理已启动，监听端口 %s，网速限制为: %d KB/s\n", LISTEN_PORT, TARGET_SPEED_KBPS)
+	fmt.Printf("SOCKS5 弱网代理已启动，监听端口 %s，网速限制为: %d KB/s\n", listenAddr, *speed)
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			continue
 		}
-		go handleSocks5(conn)
+		go handleSocks5(conn, *speed)
 	}
 }
